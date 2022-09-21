@@ -6,7 +6,7 @@
  * option. This file may not be copied, modified, or distributed except
  * according to those terms. */
 
-#![deny(warnings)]
+// #![deny(warnings)]
 #![allow(unused_doc_comments)]
 #![cfg_attr(not(feature = "std"), no_std)]
 

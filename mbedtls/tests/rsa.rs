@@ -6,8 +6,11 @@
  * option. This file may not be copied, modified, or distributed except
  * according to those terms. */
 
+// needed to have common code for `mod support` in unit and integrations tests
+#![feature(test)]
 extern crate mbedtls;
 
+extern crate test;
 use mbedtls::hash::Type::Sha256;
 use mbedtls::pk::Pk;
 use mbedtls::Error;
@@ -63,4 +66,30 @@ fn encrypt_decrypt() {
         plain.len()
     );
     assert_eq!(plain, &decrypted);
+}
+
+
+use test::Bencher;
+
+
+#[bench]
+fn bench_rsa_encrypt(b: &mut Bencher) {
+    let mut k = Pk::generate_rsa(&mut test_rng(), RSA_BITS, EXPONENT).unwrap();
+
+    let plain = b"ENCRYPT TEST ENCRYPT TEST ENCRYP";
+    let mut cipher = [0u8; RSA_BITS as usize / 8];
+    let mut decrypted = [0u8; 32];
+    b.iter(|| k.encrypt(plain, &mut cipher, &mut test_rng()).unwrap());
+}
+
+
+#[bench]
+fn bench_rsa_decrypt(b: &mut Bencher) {
+    let mut k = Pk::generate_rsa(&mut test_rng(), RSA_BITS, EXPONENT).unwrap();
+
+    let plain = b"ENCRYPT TEST ENCRYPT TEST ENCRYP";
+    let mut cipher = [0u8; RSA_BITS as usize / 8];
+    let mut decrypted = [0u8; 32];
+    k.encrypt(plain, &mut cipher, &mut test_rng()).unwrap();
+    b.iter(|| k.decrypt(&cipher, &mut decrypted, &mut test_rng()).unwrap());
 }
