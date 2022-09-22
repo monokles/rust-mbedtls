@@ -68,9 +68,37 @@ fn encrypt_decrypt() {
     assert_eq!(plain, &decrypted);
 }
 
-
 use test::Bencher;
 
+#[bench]
+fn bench_rsa_sign(b: &mut Bencher) {
+    let mut k = Pk::generate_rsa(&mut test_rng(), RSA_BITS, EXPONENT).unwrap();
+
+    let data = b"SIGNATURE TEST SIGNATURE TEST SI";
+    let mut signature = [0u8; RSA_BITS as usize / 8];
+
+    b.iter(|| k.sign(Sha256, data, &mut signature, &mut test_rng()).unwrap());
+}
+
+#[bench]
+fn bench_rsa_verify(b: &mut Bencher) {
+    let mut k = Pk::generate_rsa(&mut test_rng(), RSA_BITS, EXPONENT).unwrap();
+
+    let data = b"SIGNATURE TEST SIGNATURE TEST SI";
+    let mut signature = [0u8; RSA_BITS as usize / 8];
+
+    assert_eq!(
+        k.sign(Sha256, data, &mut signature, &mut test_rng())
+            .unwrap(),
+        signature.len()
+    );
+    b.iter(|| k.verify(Sha256, data, &signature).unwrap());
+}
+
+#[bench]
+fn bench_rsa_generate_2048(b: &mut Bencher) {
+    b.iter(|| Pk::generate_rsa(&mut test_rng(), RSA_BITS, EXPONENT).unwrap());
+}
 
 #[bench]
 fn bench_rsa_encrypt(b: &mut Bencher) {
@@ -81,7 +109,6 @@ fn bench_rsa_encrypt(b: &mut Bencher) {
     let mut decrypted = [0u8; 32];
     b.iter(|| k.encrypt(plain, &mut cipher, &mut test_rng()).unwrap());
 }
-
 
 #[bench]
 fn bench_rsa_decrypt(b: &mut Bencher) {
