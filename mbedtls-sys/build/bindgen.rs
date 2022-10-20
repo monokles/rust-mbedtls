@@ -91,7 +91,7 @@ impl super::BuildConfig {
         cc.include(&self.mbedtls_include)
         .flag(&format!(
             "-DMBEDTLS_CONFIG_FILE=\"{}\"",
-            self.config_h.to_str().expect("config.h UTF-8 error")
+            self.config_h.to_str().expect("mbedtls_config.h UTF-8 error")
         ));
 
         for cflag in &self.cflags {
