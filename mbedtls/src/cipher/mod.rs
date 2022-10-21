@@ -145,7 +145,7 @@ impl<O: Operation, T: Type> Cipher<O, T, Fresh> {
 
         // Put together the structure to return
         Ok(Cipher {
-            raw_cipher: raw_cipher,
+            raw_cipher,
             padding: raw::CipherPadding::Pkcs7,
             _op: PhantomData,
             _type: PhantomData,
