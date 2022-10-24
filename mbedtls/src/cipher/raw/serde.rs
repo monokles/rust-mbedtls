@@ -73,11 +73,28 @@ impl<Op: Operation, T: Type> Serialize for Cipher<Op, T, CipherData> {
     }
 }
 
+fn cipher_type_to_id(cipher_type : cipher_type_t) -> Result<cipher_id_t, &'static str>  {
+    match cipher_type {
+        CIPHER_NONE => Ok(CIPHER_ID_NONE),
+        CIPHER_NULL => Ok(CIPHER_ID_NULL),
+        CIPHER_AES_128_ECB..=CIPHER_AES_256_GCM |
+        CIPHER_AES_128_CCM..=CIPHER_AES_256_CCM_STAR_NO_TAG |
+        CIPHER_AES_128_OFB..=CIPHER_AES_256_XTS |
+        CIPHER_AES_128_KW..=CIPHER_AES_256_KWP => Ok(CIPHER_ID_AES),
+        CIPHER_DES_ECB..=CIPHER_DES_EDE_CBC => Ok(CIPHER_ID_DES),
+        CIPHER_DES_EDE3_ECB..=CIPHER_DES_EDE3_CBC=> Ok(CIPHER_ID_3DES),
+        CIPHER_CAMELLIA_128_ECB..=CIPHER_CAMELLIA_256_GCM |
+        CIPHER_CAMELLIA_128_CCM..=CIPHER_CAMELLIA_256_CCM_STAR_NO_TAG => Ok(CIPHER_ID_CAMELLIA),
+        CIPHER_ARIA_128_ECB..=CIPHER_ARIA_256_CCM_STAR_NO_TAG => Ok(CIPHER_ID_ARIA),
+        CIPHER_CHACHA20..=CIPHER_CHACHA20_POLY1305 => Ok(CIPHER_ID_CHACHA20),
+        _ => Err("invalid cipher type when converting cipher_type to cipher_id")
+    }
+}
+
 unsafe fn serialize_raw_cipher(mut cipher_context: cipher_context_t)
     -> Result<SavedRawCipher, &'static str> {
-    // TODO: cipher_context.private_cipher_info.private_base is now an opaque struct, need discuss about how to refactor code here
-    let cipher_id = 0;
-    // let cipher_id = (*(*cipher_context.private_cipher_info).private_base).cipher;
+    let cipher_type = (*cipher_context.private_cipher_info).private_type;
+    let cipher_id = cipher_type_to_id(cipher_type)?;
     let cipher_mode = (*cipher_context.private_cipher_info).private_mode;
     let key_bit_len = (*cipher_context.private_cipher_info).private_key_bitlen;
 
