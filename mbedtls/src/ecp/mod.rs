@@ -98,7 +98,7 @@ impl EcGroup {
 
         ret.inner.pbits = p.bit_length()?;
         ret.inner.nbits = order.bit_length()?;
-        ret.inner.h = 0; // indicate to mbedtls that the values are not static constants
+        ret.inner.private_h = 0; // indicate to mbedtls that the values are not static constants
 
         let zero = Mpi::new(0)?;
 
@@ -126,9 +126,9 @@ impl EcGroup {
             ret.inner.A = a.into_inner();
             ret.inner.B = b.into_inner();
             ret.inner.N = order.into_inner();
-            ret.inner.G.X = g_x.into_inner();
-            ret.inner.G.Y = g_y.into_inner();
-            mpi_lset(&mut ret.inner.G.Z, 1);
+            ret.inner.G.private_X = g_x.into_inner();
+            ret.inner.G.private_Y = g_y.into_inner();
+            mpi_lset(&mut ret.inner.G.private_Z, 1);
         }
 
         /*
@@ -178,7 +178,7 @@ impl EcGroup {
 
     pub fn a(&self) -> Result<Mpi> {
         // Mbedtls uses A == NULL to indicate -3 mod p
-        if self.inner.A.p == ::core::ptr::null_mut() {
+        if self.inner.A.private_p == ::core::ptr::null_mut() {
             let mut neg3 = self.p()?;
             neg3 -= 3;
             Ok(neg3)
@@ -295,20 +295,20 @@ impl EcPoint {
         let mut ret = Self::init();
 
         unsafe {
-            ret.inner.X = x.into_inner();
-            ret.inner.Y = y.into_inner();
-            mpi_lset(&mut ret.inner.Z, 1).into_result()?;
+            ret.inner.private_X = x.into_inner();
+            ret.inner.private_Y = y.into_inner();
+            mpi_lset(&mut ret.inner.private_Z, 1).into_result()?;
         };
 
         Ok(ret)
     }
 
     pub fn x(&self) -> Result<Mpi> {
-        Mpi::copy(&self.inner.X)
+        Mpi::copy(&self.inner.private_X)
     }
 
     pub fn y(&self) -> Result<Mpi> {
-        Mpi::copy(&self.inner.Y)
+        Mpi::copy(&self.inner.private_Y)
     }
 
     pub fn is_zero(&self) -> Result<bool> {
