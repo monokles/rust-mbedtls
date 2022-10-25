@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use std::io::{Error as IoError, ErrorKind as IoErrorKind};
 use mbedtls::ssl::{Config, Context};
 
+extern crate mbedtls;
 mod support;
 use support::rand::test_rng;
 
