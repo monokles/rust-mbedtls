@@ -30,6 +30,7 @@ use mbedtls_sys::types::size_t;
 mod support;
 use support::entropy::entropy_new;
 use support::keys;
+use support::rand::test_rng;
 
 /// Simple type to unify TCP and UDP connections, to support both TLS and DTLS
 enum Connection {
@@ -86,7 +87,7 @@ fn client(
                 (keys::EXPIRED_CERT_SUBJECT, 0, flags) => assert_eq!(**flags, expected_flags),
                 _ => assert!(false),
             };
-            
+
             verify_flags.remove(VerifyError::CERT_EXPIRED); //we check the flags at the end,
             //so removing this flag here prevents the connections from failing with VerifyError
             Ok(())
@@ -109,7 +110,7 @@ fn client(
         }
         Err(e) => {
             match e {
-                Error::SslBadHsProtocolVersion => {assert!(exp_version.is_none())},
+                Error::SslBadProtocolVersion => {assert!(exp_version.is_none())},
                 Error::SslFatalAlertMessage => {},
                 e => panic!("Unexpected error {}", e),
             };
@@ -149,7 +150,7 @@ fn server(
     config.set_max_version(max_version)?;
     if !use_psk { // for certificate-based operation, set up certificates
         let cert = Arc::new(Certificate::from_pem_multiple(keys::EXPIRED_CERT.as_bytes())?);
-        let key = Arc::new(Pk::from_private_key(keys::EXPIRED_KEY.as_bytes(), None)?);
+        let key = Arc::new(Pk::from_private_key(&mut test_rng(), keys::EXPIRED_KEY.as_bytes(), None)?);
         config.push_cert(cert, key)?;
     } else { // for psk-based operation, only PSK required
         config.set_psk(&[0x12, 0x34, 0x56, 0x78], "client")?;
@@ -181,7 +182,7 @@ fn server(
             match e {
                 // client just closes connection instead of sending alert
                 Error::NetSendFailed => {assert!(exp_version.is_none())},
-                Error::SslBadHsProtocolVersion => {},
+                Error::SslBadProtocolVersion => {},
                 e => panic!("Unexpected error {}", e),
             };
             return Ok(());
@@ -223,14 +224,13 @@ mod test {
         }
 
         let test_configs = [
-            TestConfig::new(Version::Ssl3, Version::Ssl3, Version::Ssl3, Version::Ssl3, Some(Version::Ssl3)),
-            TestConfig::new(Version::Ssl3, Version::Tls1_2, Version::Ssl3, Version::Ssl3, Some(Version::Ssl3)),
-            TestConfig::new(Version::Tls1_0, Version::Tls1_0, Version::Tls1_0, Version::Tls1_0, Some(Version::Tls1_0)),
-            TestConfig::new(Version::Tls1_1, Version::Tls1_1, Version::Tls1_1, Version::Tls1_1, Some(Version::Tls1_1)),
             TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_2, Version::Tls1_2, Some(Version::Tls1_2)),
-            TestConfig::new(Version::Tls1_0, Version::Tls1_2, Version::Tls1_0, Version::Tls1_2, Some(Version::Tls1_2)),
-            TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_0, Version::Tls1_2, Some(Version::Tls1_2)),
-            TestConfig::new(Version::Tls1_0, Version::Tls1_1, Version::Tls1_2, Version::Tls1_2, None)
+            TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_2, Version::Tls1_3, Some(Version::Tls1_2)),
+            TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_3, Version::Tls1_3, None),
+            TestConfig::new(Version::Tls1_2, Version::Tls1_3, Version::Tls1_2, Version::Tls1_3, Some(Version::Tls1_3)),
+            TestConfig::new(Version::Tls1_2, Version::Tls1_3, Version::Tls1_3, Version::Tls1_3, Some(Version::Tls1_3)),
+            TestConfig::new(Version::Tls1_3, Version::Tls1_3, Version::Tls1_2, Version::Tls1_3, Some(Version::Tls1_3)),
+            TestConfig::new(Version::Tls1_3, Version::Tls1_3, Version::Tls1_2, Version::Tls1_2, None),
         ];
 
         for config in &test_configs {
@@ -263,11 +263,6 @@ mod test {
             s.join().unwrap();
 
             // DTLS tests using certificates
-
-            // DTLS 1.0 is based on TSL 1.1
-            if min_c < Version::Tls1_1 || min_s < Version::Tls1_1 || exp_ver.is_none() {
-                continue;
-            }
 
             let s = UdpSocket::bind("127.0.0.1:12340").expect("could not bind UdpSocket");
             let s = ConnectedUdpSocket::connect(s, "127.0.0.1:12341").expect("could not connect UdpSocket");

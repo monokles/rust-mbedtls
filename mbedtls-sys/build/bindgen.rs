@@ -8,9 +8,11 @@
 
 use bindgen;
 
+use std::env;
 use std::fmt::Write as _;
 use std::fs::{self, File};
 use std::io::Write;
+use std::path::Path;
 
 use crate::headers;
 
@@ -75,7 +77,7 @@ fn generate_deprecated_union_accessors(bindings: &str) -> String {
     }
 
     let mut impl_builder = UnionImplBuilder::default();
-    syn::visit::visit_file(&mut impl_builder, &syn::parse_file(&bindings).unwrap());
+    syn::visit::visit_file(&mut impl_builder, &syn::parse_file(bindings).unwrap());
 
     impl_builder.impls
 }
@@ -102,23 +104,21 @@ impl super::BuildConfig {
         // uses the correct headers
         let compiler = cc.get_compiler();
         if compiler.is_like_gnu() {
-            let output = compiler.to_command().args(&["--print-sysroot"]).output();
-            match output {
-                Ok(sysroot) => {
-                    let path = std::str::from_utf8(&sysroot.stdout).expect("Malformed sysroot");
-                    let trimmed_path = path
-                        .strip_suffix("\r\n")
-                        .or(path.strip_suffix("\n"))
-                        .unwrap_or(&path);
-                    cc.flag(&format!("--sysroot={}", trimmed_path));
-                }
-                _ => {} // skip toolchains without a configured sysroot
+            let output = compiler.to_command().args(["--print-sysroot"]).output();
+            if let Ok(sysroot) = output {
+                let path = std::str::from_utf8(&sysroot.stdout).expect("Malformed sysroot");
+                let trimmed_path = path
+                    .strip_suffix("\r\n")
+                    .or(path.strip_suffix("\n"))
+                    .unwrap_or(path);
+                cc.flag(&format!("--sysroot={}", trimmed_path));
             };
         }
-
+        let extra_define_header_path = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("build").join("extra_defines.h");
         let bindings = bindgen::builder()
             .enable_function_attribute_detection()
             .clang_args(cc.get_compiler().args().iter().map(|arg| arg.to_str().unwrap()))
+            .header(extra_define_header_path.to_str().expect("Cannot convert path of `extra_defines.h` to string"))
             .header_contents("bindgen-input.h", &input)
             .allowlist_function("^(?i)mbedtls_.*")
             .allowlist_type("^(?i)mbedtls_.*")

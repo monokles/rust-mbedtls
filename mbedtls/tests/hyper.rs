@@ -9,6 +9,9 @@ use std::borrow::Cow;
 use std::io::{Error as IoError, ErrorKind as IoErrorKind};
 use mbedtls::ssl::{Config, Context};
 
+mod support;
+use support::rand::test_rng;
+
 // Native TLS compatibility - to move to native tls client in the future
 #[derive(Clone)]
 pub struct TlsStream<T> {
@@ -299,7 +302,7 @@ mod tests {
         config.set_min_version(Version::Tls1_2).unwrap();
 
         let cert = Arc::new(Certificate::from_pem_multiple(PEM_CERT).unwrap());
-        let key = Arc::new(Pk::from_private_key(PEM_KEY, None).unwrap());
+        let key = Arc::new(Pk::from_private_key(&mut test_rng(), PEM_KEY, None).unwrap());
         config.push_cert(cert, key).unwrap();
         
         let ssl = MbedSSLServer { rc_config: Arc::new(config) };
@@ -357,7 +360,7 @@ mod tests {
             config.set_dbg_callback(dbg_callback.clone());
 
             let cert = Arc::new(Certificate::from_pem_multiple(PEM_CERT).unwrap());
-            let key = Arc::new(Pk::from_private_key(PEM_KEY, None).unwrap());
+            let key = Arc::new(Pk::from_private_key(&mut test_rng(), PEM_KEY, None).unwrap());
 
             let cipher_suites : Vec<i32> = vec![RsaWithAes128GcmSha256.into(), DheRsaWithAes128GcmSha256.into(), PskWithAes128GcmSha256.into(), DhePskWithAes128GcmSha256.into(), RsaPskWithAes128GcmSha256.into(), 0];
 
