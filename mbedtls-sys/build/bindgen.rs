@@ -114,11 +114,9 @@ impl super::BuildConfig {
                 cc.flag(&format!("--sysroot={}", trimmed_path));
             };
         }
-        let extra_define_header_path = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("build").join("extra_defines.h");
         let bindings = bindgen::builder()
             .enable_function_attribute_detection()
             .clang_args(cc.get_compiler().args().iter().map(|arg| arg.to_str().unwrap()))
-            .header(extra_define_header_path.to_str().expect("Cannot convert path of `extra_defines.h` to string"))
             .header_contents("bindgen-input.h", &input)
             .allowlist_function("^(?i)mbedtls_.*")
             .allowlist_type("^(?i)mbedtls_.*")
