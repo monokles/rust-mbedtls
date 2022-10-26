@@ -426,13 +426,13 @@ impl Cipher {
     pub fn encrypt_auth_inplace(
         &mut self,
         ad: &[u8],
-        data: &mut [u8],
-        tag: &mut [u8],
+        data_with_tag: &mut [u8],
+        tag_len: usize,
     ) -> Result<usize> {
 
         let iv = self.inner.private_iv;
         let iv_len = self.inner.private_iv_size;
-        let mut olen = data.len();
+        let mut olen = data_with_tag.len();
         unsafe {
             cipher_auth_encrypt_ext(
                 &mut self.inner,
@@ -440,12 +440,12 @@ impl Cipher {
                 iv_len,
                 ad.as_ptr(),
                 ad.len(),
-                data.as_ptr(),
-                data.len(),
-                data.as_mut_ptr(),
+                data_with_tag.as_ptr(),
+                data_with_tag.len() - tag_len,
+                data_with_tag.as_mut_ptr(),
                 olen,
                 &mut olen,
-                tag.len(),
+                tag_len,
             )
             .into_result()?
         };
@@ -456,13 +456,13 @@ impl Cipher {
     pub fn decrypt_auth_inplace(
         &mut self,
         ad: &[u8],
-        data: &mut [u8],
-        tag: &[u8],
+        data_with_tag: &mut [u8],
+        tag_len: usize,
     ) -> Result<usize> {
 
         let iv = self.inner.private_iv;
         let iv_len = self.inner.private_iv_size;
-        let mut plain_len = data.len();
+        let mut plain_len = data_with_tag.len();
         unsafe {
             cipher_auth_decrypt_ext(
                 &mut self.inner,
@@ -470,12 +470,12 @@ impl Cipher {
                 iv_len,
                 ad.as_ptr(),
                 ad.len(),
-                data.as_ptr(),
-                data.len(),
-                data.as_mut_ptr(),
-                plain_len,
+                data_with_tag.as_ptr(),
+                data_with_tag.len(),
+                data_with_tag.as_mut_ptr(),
+                data_with_tag.len() - tag_len,
                 &mut plain_len,
-                tag.len(),
+                tag_len,
             )
             .into_result()?
         };
