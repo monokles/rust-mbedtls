@@ -225,12 +225,6 @@ mod test {
 
         let test_configs = [
             TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_2, Version::Tls1_2, Some(Version::Tls1_2)),
-            TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_2, Version::Tls1_3, Some(Version::Tls1_2)),
-            TestConfig::new(Version::Tls1_2, Version::Tls1_2, Version::Tls1_3, Version::Tls1_3, None),
-            TestConfig::new(Version::Tls1_2, Version::Tls1_3, Version::Tls1_2, Version::Tls1_3, Some(Version::Tls1_3)),
-            TestConfig::new(Version::Tls1_2, Version::Tls1_3, Version::Tls1_3, Version::Tls1_3, Some(Version::Tls1_3)),
-            TestConfig::new(Version::Tls1_3, Version::Tls1_3, Version::Tls1_2, Version::Tls1_3, Some(Version::Tls1_3)),
-            TestConfig::new(Version::Tls1_3, Version::Tls1_3, Version::Tls1_2, Version::Tls1_2, None),
         ];
 
         for config in &test_configs {

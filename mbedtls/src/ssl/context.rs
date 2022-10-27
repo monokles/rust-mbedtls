@@ -236,7 +236,7 @@ impl<T> Context<T> {
 
         unsafe {
             ssl_init(&mut inner);
-            ssl_setup(&mut inner, (&*config).into());
+            ssl_setup(&mut inner, (&*config).into()).into_result().unwrap();
         };
 
         Context {

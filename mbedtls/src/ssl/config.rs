@@ -179,7 +179,7 @@ impl Config {
             ssl_config_init(&mut inner);
 
             // Set default values - after this point we will need ssl_config_free to be called.
-            ssl_config_defaults(&mut inner, e as c_int, t as c_int, p as c_int);
+            ssl_config_defaults(&mut inner, e as c_int, t as c_int, p as c_int).into_result().unwrap();
         };
 
         Config {
