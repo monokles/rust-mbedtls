@@ -85,6 +85,7 @@ impl Ecdh {
 
         let mut ret = Self::init();
         unsafe {
+            ecdh_setup(&mut ret.inner, public.inner.private_grp.id).into_result()?;
             ecp_group_copy(&mut ret.inner.private_ctx.private_mbed_ecdh.private_grp, &private.inner.private_grp).into_result()?;
             mpi_copy(&mut ret.inner.private_ctx.private_mbed_ecdh.private_d, &private.inner.private_d).into_result()?;
             ecp_copy(&mut ret.inner.private_ctx.private_mbed_ecdh.private_Qp, &public.inner.private_Q).into_result()?;
