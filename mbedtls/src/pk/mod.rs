@@ -251,10 +251,10 @@ impl Pk {
         Ok(ret)
     }
 
-    pub fn private_from_ec_components(mut curve: EcGroup, private_key: Mpi) -> Result<Pk> {
+    pub fn private_from_ec_components<F: Random>(rng: &mut F, mut curve: EcGroup, private_key: Mpi) -> Result<Pk> {
         let mut ret = Self::init();
         let curve_generator = curve.generator()?;
-        let public_point = curve_generator.mul(&mut curve, &private_key)?;
+        let public_point = curve_generator.mul(&mut curve, &private_key, rng)?;
         unsafe {
             pk_setup(&mut ret.inner, pk_info_from_type(Type::Eckey.into())).into_result()?;
             let ctx = ret.inner.private_pk_ctx as *mut ecp_keypair;
@@ -1109,7 +1109,7 @@ iy6KC991zzvaWY/Ys+q/84Afqa+0qJKQnPuy/7F5GkVdQA/lfbhi
         assert_eq!(pem1, pem2);
 
         let mut key_from_components =
-            Pk::private_from_ec_components(secp256r1.clone(), key1.ec_private().unwrap()).unwrap();
+            Pk::private_from_ec_components(&mut crate::test_support::rand::test_rng(), secp256r1.clone(), key1.ec_private().unwrap()).unwrap();
         let pem3 = key_from_components.write_private_pem_string().unwrap();
 
         assert_eq!(pem3, pem2);
