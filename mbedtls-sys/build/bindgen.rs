@@ -19,7 +19,8 @@ struct MbedtlsParseCallbacks;
 
 impl bindgen::callbacks::ParseCallbacks for MbedtlsParseCallbacks {
     fn item_name(&self, original_item_name: &str) -> Option<String> {
-        Some(original_item_name.trim_start_matches("mbedtls_").trim_start_matches("MBEDTLS_").to_owned())
+        Some(original_item_name.trim_start_matches("psa_").trim_start_matches("PSA_")
+            .trim_start_matches("mbedtls_").trim_start_matches("MBEDTLS_").to_owned())
     }
 
     fn enum_variant_name(
@@ -119,6 +120,9 @@ impl super::BuildConfig {
             .allowlist_function("^(?i)mbedtls_.*")
             .allowlist_type("^(?i)mbedtls_.*")
             .allowlist_var("^(?i)mbedtls_.*")
+            .allowlist_function("^(?i)psa_.*")
+            .allowlist_type("^(?i)psa_.*")
+            .allowlist_var("^(?i)psa_.*")
             .allowlist_recursively(false)
             .blocklist_type("^mbedtls_time_t$")
             .use_core()
