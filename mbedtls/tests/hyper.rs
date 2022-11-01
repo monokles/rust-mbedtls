@@ -193,10 +193,16 @@ mod tests {
     #[test]
     fn test_simple_request() {
         let mut config = Config::new(Endpoint::Client, Transport::Stream, Preset::Default);
+        unsafe { mbedtls::set_global_debug_threshold(1); }
+        // This is mostly as an example - how to debug mbedtls
+        let dbg_callback = |level: i32, file: Cow<'_, str>, line: i32, message: Cow<'_, str>| {
+            println!("{} {}:{} {}", level, file, line, message);
+        };
+        config.set_dbg_callback(dbg_callback);
 
         config.set_authmode(AuthMode::None);
         config.set_rng(rng_new());
-        config.set_min_version(Version::Tls1_2).unwrap();
+        config.set_min_version(Version::Tls1_3).unwrap();
 
         let ssl = MbedSSLClient::new(Arc::new(config), false);
         let connector = HttpsConnector::new(ssl);
@@ -214,7 +220,7 @@ mod tests {
 
         config.set_rng(rng_new());
         config.set_authmode(AuthMode::None);
-        config.set_min_version(Version::Tls1_2).unwrap();
+        config.set_min_version(Version::Tls1_3).unwrap();
         
         // Immutable from this point on
         let ssl = MbedSSLClient::new(Arc::new(config), false);
@@ -238,7 +244,7 @@ mod tests {
 
         config.set_authmode(AuthMode::None);
         config.set_rng(rng_new());
-        config.set_min_version(Version::Tls1_2).unwrap();
+        config.set_min_version(Version::Tls1_3).unwrap();
         
         let ssl = MbedSSLClient::new(Arc::new(config), false);
         let client = Arc::new(hyper::Client::with_connector(Pool::with_connector(Default::default(), HttpsConnector::new(ssl.clone()))));
@@ -265,7 +271,7 @@ mod tests {
 
         config.set_authmode(AuthMode::Required);
         config.set_rng(rng_new());
-        config.set_min_version(Version::Tls1_2).unwrap();
+        config.set_min_version(Version::Tls1_3).unwrap();
 
         let verify_callback = |_crt: &Certificate, _depth: i32, verify_flags: &mut VerifyError| {
             *verify_flags = VerifyError::CERT_OTHER;
@@ -300,7 +306,7 @@ mod tests {
 
         config.set_rng(rng_new());
         config.set_authmode(AuthMode::None);
-        config.set_min_version(Version::Tls1_2).unwrap();
+        config.set_min_version(Version::Tls1_3).unwrap();
 
         let cert = Arc::new(Certificate::from_pem_multiple(PEM_CERT).unwrap());
         let key = Arc::new(Pk::from_private_key(&mut test_rng(), PEM_KEY, None).unwrap());
@@ -324,7 +330,7 @@ mod tests {
 
         config.set_authmode(AuthMode::Required);
         config.set_rng(rng_new());
-        config.set_min_version(Version::Tls1_2).unwrap();
+        config.set_min_version(Version::Tls1_3).unwrap();
         config.set_ca_list(Arc::new(Certificate::from_pem_multiple(ROOT_CA_CERT).unwrap()), None);
         
         let ssl = MbedSSLClient::new(Arc::new(config), false);
@@ -357,7 +363,7 @@ mod tests {
             let mut config = Config::new(Endpoint::Server, Transport::Stream, Preset::Default);
 
             config.set_rng(rng.clone());
-            config.set_min_version(Version::Tls1_2).unwrap();
+            config.set_min_version(Version::Tls1_3).unwrap();
             config.set_dbg_callback(dbg_callback.clone());
 
             let cert = Arc::new(Certificate::from_pem_multiple(PEM_CERT).unwrap());
@@ -402,7 +408,7 @@ mod tests {
 
             config.set_authmode(AuthMode::Required);
             config.set_rng(rng.clone());
-            config.set_min_version(Version::Tls1_2).unwrap();
+            config.set_min_version(Version::Tls1_3).unwrap();
             config.set_ca_list(Arc::new(Certificate::from_pem_multiple(ROOT_CA_CERT).unwrap()), None);
 
             config.set_dbg_callback(dbg_callback.clone());
