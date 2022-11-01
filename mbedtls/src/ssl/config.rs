@@ -177,7 +177,10 @@ impl Config {
         unsafe {
             // This is just a memset to 0.
             ssl_config_init(&mut inner);
-
+            let status = crypto_init();
+            if status != 0 {
+                panic!("Failed to initialize PSA Crypto\n");
+            }
             // Set default values - after this point we will need ssl_config_free to be called.
             ssl_config_defaults(&mut inner, e as c_int, t as c_int, p as c_int).into_result().unwrap();
         };
