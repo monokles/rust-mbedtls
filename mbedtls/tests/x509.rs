@@ -8,7 +8,8 @@
 
 extern crate mbedtls;
 
-use mbedtls::x509::certificate::{Certificate, List, LinkedCertificate};
+use mbedtls::alloc::{Box as MbedtlsBox, List as MbedtlsList};
+use mbedtls::x509::certificate::Certificate;
 use mbedtls::x509::Crl;
 use std::ffi::CString;
 
@@ -16,22 +17,24 @@ mod support;
 
 #[test]
 fn verify_x509() {
-    fn read_cert(cert: &'static str) -> Option<Certificate> {
+    fn read_cert(cert: &'static str) -> Option<MbedtlsBox<Certificate>> {
         let cert = CString::new(cert.as_bytes()).ok()?;
         Certificate::from_pem(cert.as_bytes_with_nul()).ok()
     }
 
-    let mut root = read_cert(include_str!("data/root.crt")).unwrap();
+    let root = read_cert(include_str!("data/root.crt")).unwrap();
     let cert = read_cert(include_str!("data/certificate.crt")).unwrap();
 
-    let mut certs = vec![cert];
-    let certs = &mut List::from_vec(&mut certs).unwrap();
+    let mut certs = MbedtlsList::new();
+    certs.push(cert);
+    let mut roots = MbedtlsList::new();
+    roots.push(root);
 
-    assert!(LinkedCertificate::verify(certs.into(), &mut root, None, None).is_ok());
+    assert!(Certificate::verify(&certs, &roots, None, None).is_ok());
 
     let mut crl = Crl::new();
     crl.push_from_der(include_bytes!("data/root.empty.crl")).unwrap();
-    assert!(LinkedCertificate::verify(certs.into(), &mut root, Some(&mut crl), None).is_ok());
+    assert!(Certificate::verify(&certs, &roots, Some(&mut crl), None).is_ok());
 
     // A bug in the ARMmbed mbedtls library only revokes certificates when a time source is
     // available. We temporarily disable the following test, until patch
