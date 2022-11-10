@@ -10,10 +10,10 @@ use core::fmt;
 use core::iter::FromIterator;
 use core::ptr::NonNull;
 
-use mbedtls_sys::*;
 use mbedtls_sys::types::raw_types::{c_char, c_void};
+use mbedtls_sys::*;
 
-use crate::alloc::{List as MbedtlsList, Box as MbedtlsBox};
+use crate::alloc::{Box as MbedtlsBox, List as MbedtlsList};
 #[cfg(not(feature = "std"))]
 use crate::alloc_prelude::*;
 use crate::error::{Error, IntoResult, Result};
@@ -226,7 +226,7 @@ impl Certificate {
     fn verify_ex<F>(
         chain: &MbedtlsList<Certificate>,
         trust_ca: &MbedtlsList<Certificate>,
-        ca_crl: Option<&mut Crl>,
+        ca_crl: Option<&MbedtlsList<Crl>>,
         err_info: Option<&mut String>,
         cb: Option<F>,
     ) -> Result<()>
@@ -240,11 +240,12 @@ impl Certificate {
             (None, ::core::ptr::null_mut())
         };
         let mut flags = 0;
+        let crl_ptr = unsafe { ca_crl.map_or(::core::ptr::null_mut(), |c| c.inner_ffi_mut()) };
         let result = unsafe {
             x509_crt_verify(
                 chain.inner_ffi_mut(),
                 trust_ca.inner_ffi_mut(),
-                ca_crl.map_or(::core::ptr::null_mut(), |crl| crl.handle_mut()),
+                crl_ptr,
                 ::core::ptr::null(),
                 &mut flags,
                 f_vrfy,
@@ -270,7 +271,7 @@ impl Certificate {
     pub fn verify(
         chain: &MbedtlsList<Certificate>,
         trust_ca: &MbedtlsList<Certificate>,
-        ca_crl: Option<&mut Crl>,
+        ca_crl: Option<&MbedtlsList<Crl>>,
         err_info: Option<&mut String>,
     ) -> Result<()> {
         Self::verify_ex(chain, trust_ca, ca_crl, err_info, None::<&dyn VerifyCallback>)
@@ -279,7 +280,7 @@ impl Certificate {
     pub fn verify_with_callback<F>(
         chain: &MbedtlsList<Certificate>,
         trust_ca: &MbedtlsList<Certificate>,
-        ca_crl: Option<&mut Crl>,
+        ca_crl: Option<&MbedtlsList<Crl>>,
         err_info: Option<&mut String>,
         cb: F,
     ) -> Result<()>
@@ -516,14 +517,14 @@ impl MbedtlsBox<Certificate> {
     
     fn list_next(&self) -> Option<&MbedtlsBox<Certificate>> {
         unsafe {
-            <&Option<MbedtlsBox<_>> as UnsafeFrom<_>>::from(&(**self).inner.next).unwrap().as_ref()
+            <&Option<MbedtlsBox<Certificate>> as UnsafeFrom<_>>::from(&(**self).inner.next)
+                .unwrap()
+                .as_ref()
         }
     }
 
     fn list_next_mut(&mut self) -> &mut Option<MbedtlsBox<Certificate>> {
-        unsafe {
-            <&mut Option<MbedtlsBox<_>> as UnsafeFrom<_>>::from(&mut(**self).inner.next).unwrap()
-        }
+        unsafe { <&mut Option<MbedtlsBox<Certificate>> as UnsafeFrom<_>>::from(&mut (**self).inner.next).unwrap() }
     }
 }
 
@@ -682,7 +683,8 @@ impl<'a> Iterator for IterMut<'a> {
     fn next(&mut self) -> Option<&'a mut MbedtlsBox::<Certificate>> {
         let ret = self.next.take()?;
         unsafe {
-            self.next = <&mut Option<MbedtlsBox<_>> as UnsafeFrom<_>>::from(&mut (**ret).inner.next).and_then(|v| v.as_mut());
+            self.next =
+                <&mut Option<MbedtlsBox<Certificate>> as UnsafeFrom<_>>::from(&mut (**ret).inner.next).and_then(|v| v.as_mut());
         }
         Some(ret)
     }
@@ -1453,16 +1455,16 @@ cYp0bH/RcPTC0Z+ZaqSWMtfxRrk63MJQF9EXpDCdvQRcTMD9D85DJrMKn8aumq0M
         const C_ROOT: &'static str = concat!(include_str!("../../tests/data/root.crt"), "\0");
         const C_CRL: &'static [u8] = include_bytes!("../../tests/data/root.empty.crl");
 
-        let mut certs = MbedtlsList::new();
+        let mut certs = MbedtlsList::<Certificate>::new();
         certs.push(Certificate::from_pem(&C_CERT.as_bytes()).unwrap());
-        let mut roots = MbedtlsList::new();
+        let mut roots = MbedtlsList::<Certificate>::new();
         roots.push(Certificate::from_pem(&C_ROOT.as_bytes()).unwrap());
 
         assert!(Certificate::verify(&certs, &roots, None, None).is_ok());
 
-        let mut crl = Crl::new();
-        crl.push_from_der(C_CRL).unwrap();
-        assert!(Certificate::verify(&certs, &roots, Some(&mut crl), None).is_ok());
+        let mut crl = MbedtlsList::<Crl>::new();
+        crl.push(Crl::from_der(C_CRL).unwrap());
+        assert!(Certificate::verify(&certs, &roots, Some(&crl), None).is_ok());
     }
 
     #[test]
@@ -1471,17 +1473,17 @@ cYp0bH/RcPTC0Z+ZaqSWMtfxRrk63MJQF9EXpDCdvQRcTMD9D85DJrMKn8aumq0M
         const C_ROOT: &'static str = concat!(include_str!("../../tests/data/root.crt"), "\0");
         const C_CRL: &'static [u8] = include_bytes!("../../tests/data/root.revoked.crl");
 
-        let mut certs = MbedtlsList::new();
+        let mut certs = MbedtlsList::<Certificate>::new();
         certs.push(Certificate::from_pem(&C_CERT.as_bytes()).unwrap());
-        let mut roots = MbedtlsList::new();
+        let mut roots = MbedtlsList::<Certificate>::new();
         roots.push(Certificate::from_pem(&C_ROOT.as_bytes()).unwrap());
 
-        let mut crl = Crl::new();
-        crl.push_from_der(C_CRL).unwrap();
+        let mut crl = MbedtlsList::<Crl>::new();
+        crl.push(Crl::from_der(C_CRL).unwrap());
 
         let mut err = String::new();
         assert_eq!(
-            Certificate::verify(&certs, &roots, Some(&mut crl), Some(&mut err)).unwrap_err(),
+            Certificate::verify(&certs, &roots, Some(&crl), Some(&mut err)).unwrap_err(),
             Error::X509CertVerifyFailed
         );
         assert_eq!(err, "The certificate has been revoked (is on a CRL)\n");
